@@ -1,0 +1,4 @@
+StunfiskBot
+===========
+
+A stunfiskhelberbot
