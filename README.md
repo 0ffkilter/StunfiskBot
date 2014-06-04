@@ -1,4 +1,7 @@
 StunfiskBot
 ===========
 
-A stunfiskhelberbot
+A stunfiskhelperbot
+
+In Progress - /u/0ffkilter
+
