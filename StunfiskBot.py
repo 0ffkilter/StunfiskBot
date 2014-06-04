@@ -12,6 +12,9 @@ user_agent = "StunfiskHelperBot v0.1 by /u/0ffkilter"
 reddit = praw.Reddit(user_agent = user_agent)
 
 def main():
+
+    learnsets = json.loads(open('Learnsets.txt', 'r').read())
+
     comments = praw.helpers.comment_stream(reddit, 'KilterBots', limit=None, verbosity=0)
     for comment in comments:
         print(comment.body)
