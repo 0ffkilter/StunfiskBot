@@ -1,4 +1,4 @@
-import praw, argparse, sys, json
+import praw, argparse, sys, json, pprint
 
 parser = argparse.ArgumentParser()
 
@@ -13,7 +13,11 @@ reddit = praw.Reddit(user_agent = user_agent)
 
 def main():
 
-    learnsets = json.loads(open('Learnsets.txt', 'r').read())
+    file = open('Learnsets.json', 'r')
+    learnsets = json.load(file)
+    file.close()
+
+    learnsets['bulbasaur']['learnset']
 
     comments = praw.helpers.comment_stream(reddit, 'KilterBots', limit=None, verbosity=0)
     for comment in comments:
