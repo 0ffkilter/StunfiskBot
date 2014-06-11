@@ -29,7 +29,7 @@ class Comment(Model):
 Comment.create_table(True)
 
 def main():
-    comments = praw.helpers.comment_stream(reddit, 'KilterBots', limit=None, verbosity=0)
+    comments = praw.helpers.comment_stream(reddit, 'KilterBots+Stunfisk', limit=None, verbosity=0)
     for comment in comments:
         if not already_processed(comment.id):
             Comment.create(sub_id=comment.id)
