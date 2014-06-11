@@ -10,7 +10,7 @@ args = parser.parse_args()
 user_agent = "StunfiskHelperBot v0.1 by /u/0ffkilter"
 
 reddit = praw.Reddit(user_agent = user_agent)
-reddit.login('StunfiskHelperBot', 'ratchet')
+reddit.login('StunfiskHelperBot', open('%s%s' %(os.cwd(), '/Config.txt')))
 
 learn_types = { 'M': 'a TM', 'L': 'Level Up', 'T': 'a Move Tutor', 'S': 'an Event', 'E': "an Egg Move"}
 stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
