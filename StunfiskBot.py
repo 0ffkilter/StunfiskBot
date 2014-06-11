@@ -1,4 +1,4 @@
-import praw, argparse, sys, json, re, os
+import praw, argparse, sys, json, re, os, time
 from peewee import *
 
 parser = argparse.ArgumentParser()
@@ -29,14 +29,18 @@ class Comment(Model):
 Comment.create_table(True)
 
 def main():
-    comments = praw.helpers.comment_stream(reddit, 'KilterBots+Stunfisk', limit=None, verbosity=0)
-    for comment in comments:
-        if not already_processed(comment.id):
-            Comment.create(sub_id=comment.id)
-            for line in comment.body.strip().split('\n'):
-                if '+stunfiskhelp' in line:
-                    print('comment found! %s' %(comment.id))
-                    process_comment(line.replace('+stunfiskhelp', '').lower(), comment)
+    try:
+        comments = praw.helpers.comment_stream(reddit, 'KilterBots+Stunfisk', limit=None, verbosity=0)
+        for comment in comments:
+            if not already_processed(comment.id):
+                Comment.create(sub_id=comment.id)
+                for line in comment.body.strip().split('\n'):
+                    if '+stunfiskhelp' in line:
+                        print('comment found! %s' %(comment.id))
+                        process_comment(line.replace('+stunfiskhelp', '').lower(), comment)
+    except:
+        time.sleep(10)
+        main()
 
 def can_learn(pokemon, move):
     move = move.replace(' ', '')
@@ -164,3 +168,4 @@ pokedex = json.load(file)
 file.close()
 
 main()
+
