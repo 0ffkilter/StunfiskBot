@@ -1,4 +1,5 @@
-import praw, argparse, sys, json, re
+import praw, argparse, sys, json, re, os
+from peewee import *
 
 parser = argparse.ArgumentParser()
 
@@ -9,28 +10,39 @@ args = parser.parse_args()
 
 user_agent = "StunfiskHelperBot v0.1 by /u/0ffkilter"
 
+config = open('%s%s' %(os.getcwd(), '/Config.txt'), 'r').read().split('\n')
+
 reddit = praw.Reddit(user_agent = user_agent)
-reddit.login('StunfiskHelperBot', open('%s%s' %(os.cwd(), '/Config.txt')))
+reddit.login('StunfiskHelperBot', config[0])
+
+db = MySQLDatabase(database='stunbot', host='localhost', user='root', passwd=config[1])
+db.connect()
 
 learn_types = { 'M': 'a TM', 'L': 'Level Up', 'T': 'a Move Tutor', 'S': 'an Event', 'E': "an Egg Move"}
 stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
-approved_users = ['StunfiskDexter', '0ffkilter', 'veeveearnh']
 
+class Comment(Model):
+    sub_id = CharField()
+    class Meta:
+        database = db
 
-approved_regex = re.compile('###.*?###', re.DOTALL|re.MULTILINE )
-other_regex = re.compile('##Sets.*?##Nature', re.DOTALL|re.MULTILINE)
+Comment.create_table(True)
 
 def main():
-
     comments = praw.helpers.comment_stream(reddit, 'KilterBots', limit=None, verbosity=0)
     for comment in comments:
-        for line in comment.body.strip().split('\n'):
-            if '+stunfiskhelp' in line:
-                print('comment found! %s' %(comment.id))
-             #   process_comment(line.replace('+stunfiskhelp', '').lower(), comment)
+        if not already_processed(comment.id):
+            Comment.create(sub_id=comment.id)
+            for line in comment.body.strip().split('\n'):
+                if '+stunfiskhelp' in line:
+                    print('comment found! %s' %(comment.id))
+                    process_comment(line.replace('+stunfiskhelp', '').lower(), comment)
 
 def can_learn(pokemon, move):
     move = move.replace(' ', '')
+    print('%s -> %s' %(pokemon, move))
+    if 'mega' in pokemon and (not 'yanmega' in pokemon and not 'meganium' in pokemon):
+        pokemon = pokemon[:pokemon.index('mega')]
     if move in learnsets[pokemon]['learnset']:
         return learnsets[pokemon]['learnset'][move]
     else:
@@ -52,7 +64,7 @@ def keys_to_string(keys):
             result = result + gen_string(key) + '\n\n'
         return result
     else:
-        return 'No Results Found'
+        return 'No Results Found\n\n'
 
 def gen_string(key):
     string = '* Generation ' + key[0] + ' through ' + learn_types[key[1]]
@@ -73,12 +85,13 @@ def process_comment(line, comment):
     line = line.replace('-confirm', '')
 
     line.strip()
-    sections = line.split(' ')
+    sections = line.strip().split(' ')
     pokemon = sections[0]
     mode = sections[1]
-    args = sections[2:]
+    args = ''.join(sections[2:]).split(',')
     comment_string = ''
-    if pokemon.replace('-', '').replace(' ', '') in pokedex:
+    print('Pokemon: %s Mode: %s Args: %s' %(pokemon, mode, args))
+    if  pokemon.replace('-', '').replace(' ', '').strip() in pokedex:
         if mode == 'learnset':
             comment_string = learnset_comment(pokemon, args)
         elif mode == 'data' or mode == 'info':
@@ -88,14 +101,18 @@ def process_comment(line, comment):
 
         if parent:
             comment_to_parent(comment_string, comment, confirm )
+        else:
+            comment.reply(comment_string)
     else:
         comment.reply('Pokemon not found!  Sorry about that.')
 
+    print("Successful Comment! (Probably)")
+
 def comment_to_parent(string, comment, confirm):
-    parent = reddit.get_info(thing_id = 't1_%s' %(comment))
-    if type(parent) is praw.Objects.Submission:
+    parent = reddit.get_info(thing_id=comment.parent_id)
+    if type(parent) is praw.objects.Submission:
         parent.add_comment(string)
-    else:
+    elif type(parent) is praw.objects.Comment:
         parent.reply(string)
 
     if confirm:
@@ -105,15 +122,16 @@ def learnset_comment(pokemon, moves):
     comment = ''
     for move in moves:
         comment = '%s%s - %s\n\n' %(comment, pokemon, move)
-        comment = '%s%s' %(comment, keys_to_string(can_learn(pokemon, move)))
+        comment = '%s%s' %(comment, keys_to_string(can_learn(pokemon.replace('-', '').replace(' ', ''), move)))
     return comment
 
 def data_comment(pokemon):
+    name = pokemon
     pokemon = pokemon.replace('-', '').replace(' ', '')
     comment = ('>%s\n\n>Pokedex Number: %s\n\n>Types: %s\n\n>Abilities: %s\n\n>BaseStats:\n\n%s>Egg Groups: %s\n\n>Evolution: %s\n\n>PreEvolution: %s'
-        %(pokemon.capitalize(),
+        %(name.capitalize(),
         str(pokedex[pokemon]['num']),
-        ', '.join(pokedex[pokemon]['types']),
+        '/'.join(pokedex[pokemon]['types']),
         ', '.join(pokedex[pokemon]['abilities'].values()),
         stats_to_string(pokemon),
         ', '.join(pokedex[pokemon]['eggGroups']),
@@ -125,10 +143,17 @@ def set_comment(pokemon):
     page = reddit.get_wiki_page('stunfisk', pokemon)
     sections = page.content_md.split('##')
 
-    if sections[3].index('Nature') == 0: return sections[2] if sections[2].len() > 10 else 'No Sets Found'
+    if sections[3].index('Nature') == 0: return sections[2].replace('&gt;', '>') if len(sections[2]) > 10 else (
+        'I couldn\'t find a set for %s in the pokedex.  I\'m sorry.' %pokemon)
 
-    return section[3]
+    return ('##%s' % sections[3]).replace('&gt;', '>')
 
+def already_processed(sub_id):
+    try:
+        Comment.get(Comment.sub_id==sub_id)
+        return True
+    except:
+        return False
 
 file = open('Learnsets.json', 'r')
 learnsets = json.load(file)
