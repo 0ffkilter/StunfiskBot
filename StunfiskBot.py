@@ -26,7 +26,7 @@ def main():
     for comment in comments:
         for line in comment.body.strip().split('\n'):
             if '+stunfiskhelp' in line:
-                print('comment found! %s', comment.id)
+                print('comment found! %s' %(comment.id))
              #   process_comment(line.replace('+stunfiskhelp', '').lower(), comment)
 
 def can_learn(pokemon, move):
@@ -92,7 +92,14 @@ def process_comment(line, comment):
         comment.reply('Pokemon not found!  Sorry about that.')
 
 def comment_to_parent(string, comment, confirm):
-    print(foo)
+    parent = reddit.get_info(thing_id = 't1_%s' %(comment))
+    if type(parent) is praw.Objects.Submission:
+        parent.add_comment(string)
+    else:
+        parent.reply(string)
+
+    if confirm:
+        comment.reply('Confirmation Reply!')
 
 def learnset_comment(pokemon, moves):
     comment = ''
