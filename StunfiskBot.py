@@ -20,6 +20,7 @@ db.connect()
 
 learn_types = { 'M': 'a TM', 'L': 'Level Up', 'T': 'a Move Tutor', 'S': 'an Event', 'E': "an Egg Move"}
 stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
+rotom_forms = { 'w' : 'wash', 'h':'heat', 'c':'mow', 's':'fan', 'f':'frost'}
 
 class Comment(Model):
     sub_id = CharField()
@@ -91,6 +92,8 @@ def process_comment(line, comment):
     line.strip()
     sections = line.strip().split(' ')
     pokemon = sections[0]
+    if 'rotom' in pokemon:
+        pokemon = pokemon[:pokemon.index('-')] + rotom_types[pokemon[pokemon.index('-' +1):]]
     mode = sections[1]
     args = ''.join(sections[2:]).split(',')
     comment_string = ''
