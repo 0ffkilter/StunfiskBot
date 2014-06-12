@@ -93,7 +93,7 @@ def process_comment(line, comment):
     sections = line.strip().split(' ')
     pokemon = sections[0]
     if 'rotom' in pokemon:
-        pokemon = pokemon[:pokemon.index('-')] + rotom_types[pokemon[pokemon.index('-' +1):]]
+        pokemon = pokemon[:pokemon.index('-')] + rotom_forms[pokemon[pokemon.index('-') + 1:]]
     mode = sections[1]
     args = ''.join(sections[2:]).split(',')
     comment_string = ''
