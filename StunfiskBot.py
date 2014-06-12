@@ -10,7 +10,9 @@ args = parser.parse_args()
 
 user_agent = "StunfiskHelperBot v0.1 by /u/0ffkilter"
 
-config = open('%s%s' %(os.getcwd(), '/Config.txt'), 'r').read().split('\n')
+config_file =  open('%s%s' %(os.getcwd(), '/Config.txt'), 'r')
+config = config_file.read().split('\n')
+config_file.close()
 
 reddit = praw.Reddit(user_agent = user_agent)
 reddit.login('StunfiskHelperBot', config[0])
@@ -21,6 +23,7 @@ db.connect()
 learn_types = { 'M': 'a TM', 'L': 'Level Up', 'T': 'a Move Tutor', 'S': 'an Event', 'E': "an Egg Move"}
 stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
 rotom_forms = { 'w' : 'wash', 'h':'heat', 'c':'mow', 's':'fan', 'f':'frost'}
+dex_suffixes = { 'b':'Black', 'w':'White', 't':'Therian', 'm':'Mega'}
 
 class Comment(Model):
     sub_id = CharField()
@@ -30,18 +33,20 @@ class Comment(Model):
 Comment.create_table(True)
 
 def main():
-    try:
-        comments = praw.helpers.comment_stream(reddit, 'KilterBots+Stunfisk', limit=None, verbosity=0)
-        for comment in comments:
-            if not already_processed(comment.id):
-                Comment.create(sub_id=comment.id)
-                for line in comment.body.strip().split('\n'):
-                    if '+stunfiskhelp' in line:
-                        print('comment found! %s' %(comment.id))
-                        process_comment(line.replace('+stunfiskhelp', '').lower(), comment)
-    except:
-        time.sleep(10)
-        main()
+    print('Subreddits: %s', ', '.join(config[2:]))
+    while True:
+        try:
+            comments = praw.helpers.comment_stream(reddit, '+'.join(config[2:]), limit=None, verbosity=0)
+            for comment in comments:
+                if not already_processed(comment.id):
+                    Comment.create(sub_id=comment.id)
+                    for line in comment.body.strip().split('\n'):
+                        if '+stunfiskhelp' in line:
+                            print('comment found! %s' %(comment.id))
+                            process_comment(line.replace('+stunfiskhelp', '').lower(), comment)
+        except:
+            time.sleep(10)
+
 
 def can_learn(pokemon, move):
     move = move.replace(' ', '')
@@ -113,7 +118,7 @@ def process_comment(line, comment):
     else:
         comment.reply('Pokemon not found!  Sorry about that.')
 
-    print("Successful Comment! (Probably)")
+    print("Successful Comment! (Probably)\n")
 
 def comment_to_parent(string, comment, confirm):
     parent = reddit.get_info(thing_id=comment.parent_id)
@@ -126,6 +131,17 @@ def comment_to_parent(string, comment, confirm):
         comment.reply('Confirmation Reply!')
 
 def learnset_comment(pokemon, moves):
+
+    if '-' in pokemon:
+        if 'rotom' in pokemon:
+            pokemon = pokemon[:pokemon.index('-')] + rotom_forms[pokemon[pokemon.index('-') + 1:]]
+        else:
+            if pokemon[pokemon.index('-')+1:] in dex_suffixes:
+                pokemon = ('%s%s' %
+                            pokemon,
+                            dex_suffixes[pokemon.index('-') + 1 :]
+                           )
+
     comment = ''
     for move in moves:
         comment = '%s%s - %s\n\n' %(comment, pokemon, move)
@@ -133,7 +149,16 @@ def learnset_comment(pokemon, moves):
     return comment
 
 def data_comment(pokemon):
-    name = pokemon
+    print('%s -> data' %(pokemon))
+    if '-' in pokemon:
+        if 'rotom' in pokemon:
+            pokemon = pokemon[:pokemon.index('-')] + rotom_forms[pokemon[pokemon.index('-') + 1:]]
+        else:
+            if pokemon[pokemon.index('-')+1:] in dex_suffixes:
+                pokemon = ('%s%s' %
+                            pokemon,
+                            dex_suffixes[pokemon.index('-') + 1 :])
+    name= pokemon
     pokemon = pokemon.replace('-', '').replace(' ', '')
     comment = ('>%s\n\n>Pokedex Number: %s\n\n>Types: %s\n\n>Abilities: %s\n\n>BaseStats:\n\n%s>Egg Groups: %s\n\n>Evolution: %s\n\n>PreEvolution: %s'
         %(name.capitalize(),
@@ -147,6 +172,17 @@ def data_comment(pokemon):
     return comment
 
 def set_comment(pokemon):
+    print('%s -> set' %(pokemon))
+    if '-' in pokemon:
+        if 'rotom' in pokemon:
+            pokemon = pokemon[:pokemon.index('-')] + rotom_forms[pokemon[pokemon.index('-'):]]
+        else:
+            if pokemon[pokemon.index('-')+1:] in dex_suffixes:
+                pokemon = ('%s%s' %
+                            pokemon,
+                           dex_suffixes[pokemon.index('-'):]
+                           )
+
     page = reddit.get_wiki_page('stunfisk', pokemon)
     sections = page.content_md.split('##')
 
@@ -170,5 +206,9 @@ file = open('Pokedex.json', 'r')
 pokedex = json.load(file)
 file.close()
 
-main()
+try:
+    print('Starting Bot...')
+    main()
+except KeyboardInterrupt:
+    print('Force Quit the Bot')
 
