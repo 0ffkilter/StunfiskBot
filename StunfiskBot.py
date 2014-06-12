@@ -208,7 +208,7 @@ file.close()
 
 try:
     print('Starting Bot...')
-    main()
+    main(warnings='ignore')
 except KeyboardInterrupt:
     print('Force Quit the Bot')
 
