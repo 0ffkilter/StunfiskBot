@@ -45,8 +45,7 @@ def main():
                             print('comment found! %s' %(comment.id))
                             process_comment(line.replace('+stunfiskhelp', '').lower(), comment)
         except:
-            time.sleep(10)
-
+            print('Error!')
 
 def can_learn(pokemon, move):
     move = move.replace(' ', '')
