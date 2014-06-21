@@ -23,7 +23,7 @@ db.connect()
 learn_types = { 'M': 'a TM', 'L': 'Level Up', 'T': 'a Move Tutor', 'S': 'an Event', 'E': "an Egg Move"}
 stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
 rotom_forms = { 'w' : 'wash', 'h':'heat', 'c':'mow', 's':'fan', 'f':'frost'}
-dex_suffixes = { 'b':'black', 'w':'white', 't':'therian', 'm':'mega'}
+dex_suffixes = { 'b':'black', 'w':'white', 't':'therian', 'm':'mega', 'd':'defense', 'a':'attack', 's':'speed'}
 
 class Comment(Model):
     sub_id = CharField()
