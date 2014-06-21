@@ -240,7 +240,11 @@ def moveset_comment(moves):
         if all(move in learnsets[pokemon]['learnset'] for move in moves):
             pokes.append(pokemon)
 
-    comment_string = 'Here are the pokemon that can learn %s: \n\n* %s' %(', '.join(moves), '\n\n* '.join(pokes))
+    if len(pokes) > 0:
+        comment_string = 'Here are the pokemon that can learn %s: \n\n* %s' %(', '.join(moves), '\n\n* '.join(pokes))
+    else:
+        comment_string = 'No pokemon found, sorry'
+
     return comment_string
 
 def already_processed(sub_id):
