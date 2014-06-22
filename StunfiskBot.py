@@ -23,7 +23,7 @@ db.connect()
 learn_types = { 'M': 'a TM', 'L': 'Level Up', 'T': 'a Move Tutor', 'S': 'an Event', 'E': "an Egg Move"}
 stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
 rotom_forms = { 'w' : 'wash', 'h':'heat', 'c':'mow', 's':'fan', 'f':'frost'}
-dex_suffixes = { 'b':'black', 'w':'white', 't':'therian', 'm':'mega', 'd':'defense', 'a':'attack', 's':'speed'}
+dex_suffixes = { 'b':'black', 'w':'white', 't':'therian', 'm':'mega', 'd':'defense', 'a':'attack', 's':'speed', 'mega':'mega'}
 
 class Comment(Model):
     sub_id = CharField()
@@ -62,7 +62,7 @@ def main():
         except KeyboardInterrupt:
             sys.exit(0)
         except:
-            print(sys.exc_info()[0])
+            print(sys.exc_info())
 
 def can_learn(pokemon, move):
     move = move.replace(' ', '')
@@ -106,15 +106,79 @@ def stats_to_string(pokemon):
         string += '>>' + stat + ': ' + str(pokedex[pokemon]['baseStats'][stat]) + '\n\n'
     return string
 
+def get_last_set(sections):
+    for i in range(len(sections)):
+        try:
+            if sections[i].index('Nature') == 0:
+                return i
+        except ValueError:
+            pass
+
+    return 3
+
+def get_set_names(pokemon):
+    page = reddit.get_wiki_page('Stunfisk', pokemon)
+    sections = page.content_md.split('##')
+    if is_format_correct(page):
+        names = sections[3:get_last_set(sections)]
+        for index, name in enumerate(names):
+            if '#' in name:
+                name = name.replace('#', '')[:name.index('\n')]
+                names[index] = name
+        print('Sets found -> %s', names)
+        return names
+    else:
+        print('Incorrectly formatted page for: %s' %pokemon)
+        return []
+
+def is_format_correct(wiki_page):
+    sections = wiki_page.content_md.split('##')
+    return not sections[3][:7] == 'Nature'
+
+def format_poke(pokemon):
+    if '-' in pokemon:
+        if 'rotom' in pokemon:
+            pokemon = pokemon[:pokemon.index('-')] + rotom_forms[pokemon[pokemon.index('-') + 1:]]
+        else:
+            pokemon = pokemon[:pokemon.index('-')] + dex_suffixes[pokemon[pokemon.index('-')+1:]]
+    return pokemon
+
+def format_poke_set(pokemon):
+    if '-' in pokemon:
+        if 'rotom' in pokemon:
+            pokemon = pokemon[:pokemon.index('-')+1] + rotom_forms[pokemon[pokemon.index('-')+1:]]
+            print('rotom form!  -> %s' %pokemon)
+        else:
+            pokemon =  pokemon[:pokemon.index('-')+1] + dex_suffixes[pokemon[pokemon.index('-')+1:]]
+    return pokemon
+
+def sort_by_bst(pokemon):
+
+    poke_dict = {poke:sum(pokedex[poke]['baseStats'].values()) for poke in pokemon}
+    return sorted(poke_dict, key=poke_dict.get, reverse=True)
+
+
 def process_comment(line, comment):
     parent = '-parent' in line
     line = line.replace('-parent', '')
     confirm = '-confirm' in line and parent
     line = line.replace('-confirm', '')
     if 'moveset' in line:
+        number = 30
+        numbers = [int(s) for s in line.split() if s.isdigit()]
+        if numbers == []:
+            number = 30
+        else:
+            if (number > 100):
+                number = 100
+            else:
+                number = numbers[0]
+        for number in numbers:
+            line = line.replace(str(number), '')
         line = line.replace('moveset', '')
         moves = ''.join(line.split(' ')).split(',')
-        return moveset_comment(moves)
+
+        return moveset_comment(moves, number)
     else:
         line.strip()
         sections = line.strip().split(' ')
@@ -124,12 +188,7 @@ def process_comment(line, comment):
         comment_string = ''
         print('Pokemon: %s Mode: %s Args: %s' %(pokemon, mode, args))
         if '-' in pokemon:
-            temp_poke = ''
-            if 'rotom' in pokemon:
-                temp_poke = pokemon[:pokemon.index('-')] + rotom_forms[pokemon[pokemon.index('-')+1:]]
-            else:
-                temp_poke = pokemon[:pokemon.index('-')] + dex_suffixes[pokemon[pokemon.index('-')+1:]]
-
+            temp_poke = format_poke(pokemon)
             if  temp_poke in pokedex:
                 if mode == 'learnset':
                     comment_string = learnset_comment(pokemon, args)
@@ -137,7 +196,10 @@ def process_comment(line, comment):
                 elif mode == 'data' or mode == 'info':
                     comment_string = data_comment(pokemon)
                 elif mode == 'set':
-                    comment_string = set_comment(pokemon)
+                    if 'list' in line:
+                        comment_string = set_name_comment(pokemon)
+                    else:
+                        comment_string = set_comment(pokemon, args)
 
                 return comment_string
             else:
@@ -151,7 +213,10 @@ def process_comment(line, comment):
                 elif mode == 'data' or mode == 'info':
                     comment_string = data_comment(pokemon)
                 elif mode == 'set':
-                    comment_string = set_comment(pokemon)
+                    if 'list' in line:
+                        comment_string = set_name_comment(pokemon)
+                    else:
+                        comment_string = set_comment(pokemon, args)
 
                 return comment_string
             else:
@@ -179,14 +244,8 @@ def comment_to_parent(string, comment, confirm):
         comment.reply('Confirmation Reply!')
 
 def learnset_comment(pokemon, moves):
-
-    if '-' in pokemon:
-        if 'rotom' in pokemon:
-            pokemon = pokemon[:pokemon.index('-')] + rotom_forms[pokemon[pokemon.index('-') + 1:]]
-        else:
-            pokemon[:pokemon.index('-')] + dex_suffixes[pokemon[pokemon.index('-')+1:]]
-
-
+    print('%s -> learnset' %pokemon)
+    pokemon = format_poke(pokemon)
     comment = ''
     for move in moves:
         comment = '%s%s - %s\n\n' %(comment, pokemon, move)
@@ -194,12 +253,7 @@ def learnset_comment(pokemon, moves):
     return comment
 
 def data_comment(pokemon):
-    if '-' in pokemon:
-        if 'rotom' in pokemon:
-            pokemon = pokemon[:pokemon.index('-')] + rotom_forms[pokemon[pokemon.index('-') + 1:]]
-        else:
-            pokemon = pokemon[:pokemon.index('-')] + dex_suffixes[pokemon[pokemon.index('-')+1:]]
-
+    pokemon = format_poke(pokemkon)
     print('%s -> data' %(pokemon))
     name= pokemon
     pokemon = pokemon.replace('-', '').replace(' ', '')
@@ -214,26 +268,45 @@ def data_comment(pokemon):
         get_prevo(pokemon).capitalize()))
     return comment
 
-def set_comment(pokemon):
-    print('%s -> set' %(pokemon))
-    if '-' in pokemon:
-        if 'rotom' in pokemon:
-            pokemon = pokemon[:pokemon.index('-')+1] + rotom_forms[pokemon[pokemon.index('-')+1:]]
-            print('rotom form!  -> %s' %pokemon)
-        else:
-            pokemon =  pokemon[:pokemon.index('-')] + dex_suffixes[pokemon[pokemon.index('-')+1:]]
+def set_name_comment(pokemon):
+    print('%s -> set list' %pokemon)
+    names = get_set_names(pokemon)
+    if names == []:
+        return 'No defined sets found for %s' %pokemon
+    else:
+        comment_string = ''
+        for name in names:
+            comment_string = comment_string + '\n\n* %s \n\n' %name
+        return comment_string
 
-
-
+def set_comment(pokemon, set_names):
+    pokemon = format_poke_set(pokemon)
     page = reddit.get_wiki_page('stunfisk', pokemon)
     sections = page.content_md.split('##')
+    print('%s -> set' %(pokemon))
+    comment_string = ''
+    if is_format_correct(page):
+        sets = sections[3:get_last_set(sections)]
+        if set_names == []:
+            print('No Sets Quested -> Giving First One')
+            return '##%s' %sets[0].replace('&gt;', '>')
+        else:
+            print('Sets Requested -> %s' %set_names)
+            for name in set_names:
+                for set in sets:
+                    if name.strip().lower() in set[:set.index('\n')].replace(' ', '').lower():
+                        comment_string = comment_string + '##%s \n\n' %set.replace('&gt;', '>')
+        return comment_string
+    else:
+        if sections[3].index('Nature') == 0:
+            if len(sections[2]) > 10:
+                return sections[2].replace('&gt;', '>')
+            else:
+                return 'No Sets Found, Sorry!'
 
-    if sections[3].index('Nature') == 0: return sections[2].replace('&gt;', '>') if len(sections[2]) > 10 else (
-        'I couldn\'t find a set for %s in the pokedex.  I\'m sorry.' %pokemon)
+    return ('Something happened - an error I think.  Here, have something that I think is a set.\n\n##%s' % sections[3]).replace('&gt;', '>')
 
-    return ('##%s' % sections[3]).replace('&gt;', '>')
-
-def moveset_comment(moves):
+def moveset_comment(moves, number):
     print('Moveset -> %s' %(', '.join(moves)))
     pokes = []
     for pokemon in learnsets:
@@ -241,7 +314,9 @@ def moveset_comment(moves):
             pokes.append(pokemon)
 
     if len(pokes) > 0:
-        comment_string = 'Here are the pokemon that can learn %s: \n\n* %s' %(', '.join(moves), '\n\n* '.join(pokes))
+        pokes = sort_by_bst(pokes)
+        pokes = pokes[:number]
+        comment_string = 'Here are the strongest %s pokemon that can learn %s: \n\n* %s' %(str(number), ', '.join(moves), '\n\n* '.join(pokes))
     else:
         comment_string = 'No pokemon found, sorry'
 
