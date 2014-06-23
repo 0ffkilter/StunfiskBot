@@ -64,7 +64,7 @@ def main():
         except:
             print(sys.exc_info())
 
-def can_learn(pokemon, move):
+def get_learn(pokemon, move):
     move = move.replace(' ', '')
     if 'mega' in pokemon and (not 'yanmega' in pokemon and not 'meganium' in pokemon):
         pokemon = pokemon[:pokemon.index('mega')]
@@ -75,9 +75,25 @@ def can_learn(pokemon, move):
         return learnsets[pokemon]['learnset'][move]
     else:
         if 'prevo' in pokedex[pokemon]:
-            return can_learn(pokedex[pokemon]['prevo'], move)
+            return get_learn(pokedex[pokemon]['prevo'], move)
         else:
             return []
+
+def can_learn(pokemon, move):
+    move = move.replace(' ', '')
+    if 'mega' in pokemon and (not 'yanmega' in pokemon and not 'meganium' in pokemon):
+        pokemon = pokemon[:pokemon.index('mega')]
+
+    if move in learnsets[pokemon]['learnset']:
+        return True
+    else:
+        if 'prevo' in pokedex[pokemon]:
+            return can_learn(pokedex[pokemon]['prevo'].lower(), move)
+        else:
+            return False
+
+
+
 
 def get_prevo(pokemon):
     return str(pokedex[pokemon]['prevo']) if 'prevo' in pokedex[pokemon] else 'None'
@@ -249,7 +265,7 @@ def learnset_comment(pokemon, moves):
     comment = ''
     for move in moves:
         comment = '%s%s - %s\n\n' %(comment, pokemon, move)
-        comment = '%s%s' %(comment, keys_to_string(can_learn(pokemon.replace('-', '').replace(' ', ''), move)))
+        comment = '%s%s' %(comment, keys_to_string(get_learn(pokemon.replace('-', '').replace(' ', ''), move)))
     return comment
 
 def data_comment(pokemon):
@@ -310,7 +326,7 @@ def moveset_comment(moves, number):
     print('Moveset -> %s' %(', '.join(moves)))
     pokes = []
     for pokemon in learnsets:
-        if all(move in learnsets[pokemon]['learnset'] for move in moves):
+        if all(can_learn(pokemon.lower(), move) for move in moves):
             pokes.append(pokemon)
 
     if len(pokes) > 0:
