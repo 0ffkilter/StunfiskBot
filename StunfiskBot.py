@@ -59,7 +59,7 @@ def main():
                         comment_string = comment_string + suffix
                         reply(comment_string, comment, False, False)
                     if parent_string is not '***\n\n':
-                        comment_string = ocmment_string + suffix
+                        comment_string = comment_string + suffix
                         reply(parent_string, comment, True, '-parent' in comment.body and '-confirm' in comment.body)
 
 
