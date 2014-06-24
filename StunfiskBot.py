@@ -25,6 +25,8 @@ stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
 rotom_forms = { 'w' : 'wash', 'h':'heat', 'c':'mow', 's':'fan', 'f':'frost'}
 dex_suffixes = { 'b':'black', 'w':'white', 't':'therian', 'm':'mega', 'd':'defense', 'a':'attack', 's':'speed', 'mega':'mega'}
 
+suffix = '\n\n^[help](http://www.reddit.com/r/KilterBots/wiki/index) ^^created ^^by ^^/u/0ffkilter \n***'
+
 class Comment(Model):
     sub_id = CharField()
     class Meta:
@@ -54,8 +56,10 @@ def main():
                             else:
                                 comment_string = comment_string + process_comment(line.replace('+stunfiskhelp', '').lower(), comment) + '\n\n***\n\n'
                     if comment_string is not '***\n\n':
+                        comment_string = comment_string + suffix
                         reply(comment_string, comment, False, False)
                     if parent_string is not '***\n\n':
+                        comment_string = ocmment_string + suffix
                         reply(parent_string, comment, True, '-parent' in comment.body and '-confirm' in comment.body)
 
 
@@ -269,7 +273,7 @@ def learnset_comment(pokemon, moves):
     return comment
 
 def data_comment(pokemon):
-    pokemon = format_poke(pokemkon)
+    pokemon = format_poke(pokemon)
     print('%s -> data' %(pokemon))
     name= pokemon
     pokemon = pokemon.replace('-', '').replace(' ', '')
