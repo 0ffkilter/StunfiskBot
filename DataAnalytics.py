@@ -1,4 +1,5 @@
-import praw, os, json
+import praw, os, json, re
+from collections import OrderedDict
 from peewee import *
 
 
@@ -12,7 +13,7 @@ db.connect()
 
 rotom_forms = { 'w' : 'wash', 'h':'heat', 'c':'mow', 's':'fan', 'f':'frost'}
 dex_suffixes = { 'b':'black', 'w':'white', 't':'therian', 'm':'mega', 'd':'defense', 'a':'attack', 's':'speed', 'mega':'mega'}
-
+text_replace = { '\n':'', ',':'', ';':'', '.':'', '?':'', '!':'', '\'':'', '\"':''}
 
 
 class Comment(Model):
@@ -38,7 +39,9 @@ def main():
         try:
             cur = reddit.get_info(thing_id='t1_' + comment.sub_id)
             text = cur.body
-            sections = text.replace('\n', ' ').split(' ')
+            text = re.sub('|'.join([',', '\.', ';', '\?', '\!', '\:', '&gt;' ]), ' ', text )
+            print(text)
+            sections = text.split(' ')
             word_count = word_count + len(sections)
             char_count = char_count + len(text)
 
@@ -46,8 +49,8 @@ def main():
                 users[str(cur.author)] += 1
             else:
                 users[str(cur.author)] = 1
-
             for section in sections:
+                section = section.strip().lower()
                 if '-' in section:
                     if 'rotom' in section:
                         section = section[:section.index('-')] + rotom_forms[section[section.index('-') + 1:]]
@@ -55,7 +58,7 @@ def main():
                         try:
                             section = section[:section.index('-')] + dex_suffixes[section[section.index('-')+1:]]
                         except: pass
-                if section in section:
+                if section in pokedex:
                     poke_dict[section] = poke_dict[section] + 1
                 if sections == '+stunfiskhelp':
                     stun_count += 1
@@ -66,7 +69,7 @@ def main():
                     words[section] = 1
 
 
-            print('Finished Processing Comment -> %s' %cur.sub_id)
+            print('Finished Processing Comment -> %s' %comment.sub_id)
         except Exception as e:
             print(e)
 
@@ -76,6 +79,7 @@ def main():
     data_string = data_string + 'Total Word Count: %s\n' %str(word_count)
     data_string = data_string + 'Total Char Count: %s\n' %str(char_count)
     data_string = data_string + 'Total User Count: %s\n' %str(len(users))
+    data_string = data_string + 'Total Summons: %s\n' %str(stun_count)
 
 
 
@@ -93,8 +97,9 @@ def main():
 
     pokemon_string = ''
 
+    poke_dict = OrderedDict([(k,v) for v,k in sorted([(v,k) for k,v in poke_dict.items()], reverse=True)])
     for poke in poke_dict:
-        pokemon_string = pokemon_string + '%s : %s\n' %s(poke, str(poke_dict[poke]))
+        pokemon_string = pokemon_string + '%s : %s\n' %(poke, str(poke_dict[poke]))
 
     file = open('Pokemon.txt', 'r+')
     file.write(pokemon_string)
@@ -104,8 +109,9 @@ def main():
 
     user_string = ''
 
+    users = OrderedDict([(k,v) for v,k in sorted([(v,k) for k,v in users.items()], reverse=True)])
     for user in users:
-        user_string = user_string + '%s : %s\n' %s(user, str(users[user]))
+        user_string = user_string + '%s : %s\n' %(user, str(users[user]))
 
     file = open('Users.txt', 'r+')
     file.write(user_string)
@@ -115,8 +121,10 @@ def main():
 
     word_string = ''
 
+    words = OrderedDict([(k,v) for v,k in sorted([(v,k) for k,v in words.items()], reverse=True)])
+
     for word in words:
-        word_string = word_string + '%s : %s\n' %(word, str(word[words]))
+        word_string = word_string + '%s : %s\n' %(word, str(words[word]))
 
     file = open('Words.txt', 'r+')
     file.write(word_string)
