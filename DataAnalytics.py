@@ -40,7 +40,6 @@ def main():
             cur = reddit.get_info(thing_id='t1_' + comment.sub_id)
             text = cur.body
             text = re.sub('|'.join([',', '\.', ';', '\?', '\!', '\:', '&gt;' ]), ' ', text )
-            print(text)
             sections = text.split(' ')
             word_count = word_count + len(sections)
             char_count = char_count + len(text)
