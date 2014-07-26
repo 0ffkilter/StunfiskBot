@@ -26,7 +26,7 @@ rotom_forms = { 'w' : 'wash', 'h':'heat', 'c':'mow', 's':'fan', 'f':'frost'}
 dex_suffixes = { 'b':'black', 'w':'white', 't':'therian', 'm':'mega', 'd':'defense', 'a':'attack', 's':'speed', 'mega':'mega'}
 
 base_string = '***\n\n'
-suffix = '\n\n^[help](http://www.reddit.com/r/KilterBots/wiki/index) ^^created ^^by ^^/u/0ffkilter \n***'
+suffix = '\n\n^[help](http://www.reddit.com/r/Stunfisk/wiki/stunfiskbot) ^^created ^^by ^^/u/0ffkilter \n***'
 
 class Comment(Model):
     sub_id = CharField()
