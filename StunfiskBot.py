@@ -15,9 +15,9 @@ config = config_file.read().split('\n')
 config_file.close()
 
 reddit = praw.Reddit(user_agent = user_agent)
-reddit.login('StunfiskHelperBot', config[0])
+reddit.login(config[0], config[1])
 
-db = MySQLDatabase(database='stunbot', host='localhost', user='root', passwd=config[1])
+db = MySQLDatabase(database='stunbot', host='localhost', user='root', passwd=config[2])
 db.connect()
 
 learn_types = { 'M': 'a TM', 'L': 'Level Up', 'T': 'a Move Tutor', 'S': 'an Event', 'E': "an Egg Move"}
@@ -25,6 +25,7 @@ stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
 rotom_forms = { 'w' : 'wash', 'h':'heat', 'c':'mow', 's':'fan', 'f':'frost'}
 dex_suffixes = { 'b':'black', 'w':'white', 't':'therian', 'm':'mega', 'd':'defense', 'a':'attack', 's':'speed', 'mega':'mega'}
 
+base_string = '***\n\n'
 suffix = '\n\n^[help](http://www.reddit.com/r/KilterBots/wiki/index) ^^created ^^by ^^/u/0ffkilter \n***'
 
 class Comment(Model):
@@ -36,15 +37,15 @@ Comment.create_table(True)
 
 def main():
 
-    print('Subreddits: %s', ', '.join(config[2:]))
+    print('Subreddits: %s', ', '.join(config[3:]))
     while True:
         try:
             comments = praw.helpers.comment_stream(reddit, '+'.join(config[2:]), limit=None, verbosity=0)
             for comment in comments:
                 if not already_processed(comment.id):
                     Comment.create(sub_id=comment.id)
-                    comment_string = '***\n\n'
-                    parent_string = '***\n\n'
+                    comment_string = base_string
+                    parent_string = base_string
                     for line in comment.body.strip().split('\n'):
                         if '+stunfiskhelp' in line:
                             print('comment found! %s' %(comment.id))
@@ -55,11 +56,12 @@ def main():
                                 parent_string = parent_string + process_comment(line.replace('+stunfiskhelp', '').lower(), comment) + '\n\n***\n\n'
                             else:
                                 comment_string = comment_string + process_comment(line.replace('+stunfiskhelp', '').lower(), comment) + '\n\n***\n\n'
-                    if comment_string is not '***\n\n':
+
+                    if comment_string is not base_string:
                         comment_string = comment_string + suffix
                         reply(comment_string, comment, False, False)
-                    if parent_string is not '***\n\n':
-                        comment_string = comment_string + suffix
+                    if parent_string is not base_string:
+                        parent_string = parent_string + suffix
                         reply(parent_string, comment, True, '-parent' in comment.body and '-confirm' in comment.body)
 
 
@@ -179,6 +181,9 @@ def sort_by_bst(pokemon):
 
 
 def process_comment(line, comment):
+
+    if 'tell me a joke' in line:
+        return 'Your Life'
     parent = '-parent' in line
     line = line.replace('-parent', '')
     confirm = '-confirm' in line and parent
@@ -242,7 +247,6 @@ def process_comment(line, comment):
             else:
                 return 'I couldn\'t find %s in the pokedex.  If this is an error, let /u/0ffkilter know' %(pokemon)
 
-        print("Successful Comment! (Probably)\n")
 
 
 def reply(comment_string, comment, parent, confirm):
