@@ -110,12 +110,12 @@ def set_learns(pokemon, moves):
 def set_abilities(pokemon, abilities):
     if abilities == []:
         return True
-    return all(any(abil.capitalize() in pokedex[pokemon]['abilities'].values() for abil in ability.split('/')) for ability in abilities)
+    return all(any(abil.lower().capitalize() in pokedex[pokemon]['abilities'].values() for abil in ability.split('/')) for ability in abilities)
 
 def set_types(pokemon, poke_types):
     if poke_types == []:
         return True
-    return all(any(poke_typ.capitalize() in pokedex[pokemon]['types'] for poke_typ in poke_type.split('/')) for poke_type in poke_types)
+    return all(any(poke_typ.lower().capitalize() in pokedex[pokemon]['types'] for poke_typ in poke_type.split('/')) for poke_type in poke_types)
 
 def set_gens(pokemon, gens):
     if gens == []:
@@ -143,8 +143,7 @@ def keys_to_string(keys):
             result = result + gen_string(key) + '\n\n'
         return result
     else:
-        return 'No Results Found\n\n'
-
+        return 'No Results Found\n\n' 
 def gen_string(key):
     string = '* Generation ' + key[0] + ' through ' + learn_types[key[1]]
     if key[1] == 'l':
