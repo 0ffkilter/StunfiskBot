@@ -1,4 +1,4 @@
-import praw, argparse, sys, json, re, os, time
+import praw, argparse, sys, json, re, os, time, traceback
 from peewee import *
 
 parser = argparse.ArgumentParser()
@@ -24,6 +24,7 @@ learn_types = { 'M': 'a TM', 'L': 'Level Up', 'T': 'a Move Tutor', 'S': 'an Even
 stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
 rotom_forms = { 'w' : 'wash', 'h':'heat', 'c':'mow', 's':'fan', 'f':'frost'}
 dex_suffixes = { 'b':'black', 'w':'white', 't':'therian', 'm':'mega', 'd':'defense', 'a':'attack', 's':'speed', 'mega':'mega'}
+gens = [range(1, 152), range(152, 252), range(252, 387), range(387, 494), range(494, 650), range(650, 720)]
 
 base_string = '***\n\n'
 suffix = '\n\n^[help](http://www.reddit.com/r/Stunfisk/wiki/stunfiskbot) ^^created ^^by ^^/u/0ffkilter \n***'
@@ -67,8 +68,11 @@ def main():
 
         except KeyboardInterrupt:
             sys.exit(0)
-        except:
-            print(sys.exc_info())
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+            print(traceback.format_exc())
 
 def get_learn(pokemon, move):
     move = move.replace(' ', '')
@@ -98,14 +102,39 @@ def can_learn(pokemon, move):
         else:
             return False
 
+def set_learns(pokemon, moves):
+    if moves == []:
+        return True
+    return all(any(can_learn(pokemon, sub) for sub in move.split('/')) for move in moves)
 
+def set_abilities(pokemon, abilities):
+    if abilities == []:
+        return True
+    return all(any(abil.capitalize() in pokedex[pokemon]['abilities'].values() for abil in ability.split('/')) for ability in abilities)
 
+def set_types(pokemon, poke_types):
+    if poke_types == []:
+        return True
+    return all(any(poke_typ.capitalize() in pokedex[pokemon]['types'] for poke_typ in poke_type.split('/')) for poke_type in poke_types)
+
+def set_gens(pokemon, gens):
+    if gens == []:
+        return True
+    return get_gen(pokemon) in list(map(int, gens.split('/')))
 
 def get_prevo(pokemon):
     return str(pokedex[pokemon]['prevo']) if 'prevo' in pokedex[pokemon] else 'None'
 
 def get_evo(pokemon):
     return str(pokedex[pokemon]['evos'][0]) if 'evos' in pokedex[pokemon] else 'None'
+
+def get_gen(pokemon):
+    num = pokedex[pokemon]['num']
+    for index, gen in enumerate(gens):
+        if num in gen:
+            return (index + 1)
+    return 0
+
 
 def keys_to_string(keys):
     if keys:
@@ -201,9 +230,31 @@ def process_comment(line, comment):
         for number in numbers:
             line = line.replace(str(number), '')
         line = line.replace('moveset', '')
-        moves = ''.join(line.split(' ')).split(',')
+        moves = line.replace(' ', '').split(',')
 
         return moveset_comment(moves, number)
+    elif 'search' in line:
+
+
+        line = line.replace('search', '').replace(' ', '')
+        moves = []
+        types = []
+        abilities = []
+        gens = []
+
+        sections = line.split('|')
+        for section in sections:
+            if 'move:' in section or 'moves:' in section:
+                moves = section[section.index(':')+1:].split(',')
+            elif 'ability:' in section or 'abilities:' in section:
+                abilities = section[section.index(':')+1:].split(',')
+            elif 'type:' in section or 'types:' in section:
+                types = section[section.index(':')+1:].split(',')
+            elif 'gen:' in section or 'gens:' in section:
+                gens = section[section.index(':')+ 1:]
+
+        return search_comment(moves, abilities, types, gens)
+
     else:
         line.strip()
         sections = line.strip().split(' ')
@@ -330,17 +381,65 @@ def set_comment(pokemon, set_names):
 
     return ('Something happened - an error I think.  Here, have something that I think is a set.\n\n##%s' % sections[3]).replace('&gt;', '>')
 
+def search_comment(moves, abilities, types, gens):
+    print ('Moves     -> %s' %(', '.join(moves)))
+    print ('Abilities -> %s' %(', '.join(abilities)))
+    print ('Types     -> %s' %(', '.join(types)))
+    print ('Gens      -> %s' %(', '.join(gens)))
+    pokes1 = []
+    pokes2 = []
+    for pokemon in learnsets:
+        if set_learns(pokemon, moves):
+            pokes1.append(pokemon)
+    for pokemon in pokedex:
+        if set_abilities(pokemon, abilities) and set_types(pokemon, types) and set_gens(pokemon, gens):
+            pokes2.append(pokemon)
+    pokes = list(set(pokes1).intersection(set(pokes2)))
+
+    if moves == []:
+        moves = ['anything']
+
+    if abilities == []:
+        abilities = ['anything']
+
+    if types == []:
+        types = ['anything']
+
+    if gens ==[]:
+        gens = ['any gen']
+
+    if len(pokes) > 0:
+
+        if len(pokes) > 30:
+            pokes = pokes[:30]
+        pokes = sort_by_bst(pokes)
+        comment_string = 'Here are the strongest %s pokemon that: \n\n> %s \n\n> %s \n\n> %s \n\n> %s \n\n* %s' %(
+                    str(len(pokes)),
+                    ('learn: %s' % ', '.join(moves)),
+                    ('have %s as abilities' %', '.join(abilities)),
+                    ('have %s as types'  %', '.join(types)),
+                    ('and are in gen: %s' %', '.join(gens)),
+                    '\n\n* '.join(pokes))
+    else:
+        comment_string = 'No pokemon found, sorry'
+
+    return comment_string
+
 def moveset_comment(moves, number):
     print('Moveset -> %s' %(', '.join(moves)))
     pokes = []
     for pokemon in learnsets:
-        if all(can_learn(pokemon.lower(), move) for move in moves):
+        if set_learns(pokemon, moves):
             pokes.append(pokemon)
 
     if len(pokes) > 0:
         pokes = sort_by_bst(pokes)
         pokes = pokes[:number]
-        comment_string = 'Here are the strongest %s pokemon that can learn %s: \n\n* %s' %(str(number), ', '.join(moves), '\n\n* '.join(pokes))
+        comment_string = 'Here are the strongest %s pokemon out of  %s total that can learn %s: \n\n* %s' %(
+            str(number),
+            str(max(len(pokes), number)),
+            ', '.join(moves),
+            '\n\n* '.join(pokes))
     else:
         comment_string = 'No pokemon found, sorry'
 
