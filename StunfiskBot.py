@@ -110,12 +110,12 @@ def set_learns(pokemon, moves):
 def set_abilities(pokemon, abilities):
     if abilities == []:
         return True
-    return all(any(abil.lower().capitalize() in pokedex[pokemon]['abilities'].values() for abil in ability.split('/')) for ability in abilities)
+    return all(any(abil.lower().title() in pokedex[pokemon]['abilities'].values() for abil in ability.split('/')) for ability in abilities)
 
 def set_types(pokemon, poke_types):
     if poke_types == []:
         return True
-    return all(any(poke_typ.lower().capitalize() in pokedex[pokemon]['types'] for poke_typ in poke_type.split('/')) for poke_type in poke_types)
+    return all(any(poke_typ.lower().title() in pokedex[pokemon]['types'] for poke_typ in poke_type.split('/')) for poke_type in poke_types)
 
 def set_gens(pokemon, gens):
     if gens == []:
@@ -235,7 +235,7 @@ def process_comment(line, comment):
     elif 'search' in line:
 
 
-        line = line.replace('search', '').replace(' ', '')
+        line = line.replace('search', '')
         moves = []
         types = []
         abilities = []
@@ -244,13 +244,13 @@ def process_comment(line, comment):
         sections = line.split('|')
         for section in sections:
             if 'move:' in section or 'moves:' in section:
-                moves = section[section.index(':')+1:].split(',')
+                moves = section[section.index(':')+1:].replace(' ', '').split(',')
             elif 'ability:' in section or 'abilities:' in section:
-                abilities = section[section.index(':')+1:].split(',')
+                abilities = section[section.index(':')+1:].strip().split(',')
             elif 'type:' in section or 'types:' in section:
-                types = section[section.index(':')+1:].split(',')
+                types = section[section.index(':')+1:].strip().split(',')
             elif 'gen:' in section or 'gens:' in section:
-                gens = section[section.index(':')+ 1:]
+                gens = section[section.index(':')+ 1:].strip()
 
         return search_comment(moves, abilities, types, gens)
 
