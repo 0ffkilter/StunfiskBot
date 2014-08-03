@@ -6,8 +6,9 @@ def main():
             messages = list(reddit.get_unread())
             if len(messages) >= 1:
                 for message in messages:
-                    message.mark_as_read()
                     if message.subject.lower() == 'rmt':
+
+                        message.mark_as_read()
                         print('Message from /u/%s', str(message.author))
                         pokemon = message.body.replace(' ', '').lower().split(',')
                         print('Pokemon: %s' %pokemon)
