@@ -1,70 +1,48 @@
 import praw, argparse, sys, json, re, os, time, traceback
 from peewee import *
-
-parser = argparse.ArgumentParser()
-
-parser.add_argument('-u', '--username', help='username')
-parser.add_argument('-p', '--password', help='password')
-
-args = parser.parse_args()
+from logins import *
+from var_dicts import *
 
 user_agent = "StunfiskHelperBot v0.1.1 by /u/0ffkilter"
 
-config_file =  open('%s%s' %(os.getcwd(), '/Config.txt'), 'r')
-config = config_file.read().split('\n')
-config_file.close()
+reddit = praw.Reddit(user_agent=user_agent)
 
-reddit = praw.Reddit(user_agent = user_agent)
-reddit.login(config[0], config[1])
+reddit.login(bot_name, bot_password)
 
-db = MySQLDatabase(database='stunbot', host='localhost', user='root', passwd=config[2])
-db.connect()
-
-learn_types = { 'M': 'a TM', 'L': 'Level Up', 'T': 'a Move Tutor', 'S': 'an Event', 'E': "an Egg Move"}
-stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
-rotom_forms = { 'w' : 'wash', 'h':'heat', 'c':'mow', 's':'fan', 'f':'frost'}
-dex_suffixes = { 'b':'black', 'w':'white', 't':'therian', 'm':'mega', 'd':'defense', 'a':'attack', 's':'speed', 'mega':'mega', 'mega-y':'megay', 'mega-x':'megax', 'i':''}
-gens = [range(1, 152), range(152, 252), range(252, 387), range(387, 494), range(494, 650), range(650, 720)]
-
-base_string = '***\n\n'
-suffix = '\n\n^[help](http://www.reddit.com/r/Stunfisk/wiki/stunfiskbot) ^^created ^^by ^^/u/0ffkilter \n***'
+c_db = MySQLDatabase(database='stunbot', host='localhost', user='root', passwd=sql_password)
+c_db.connect()
 
 class Comment(Model):
     sub_id = CharField()
     class Meta:
-        database = db
+        database = c_db
 
 Comment.create_table(True)
 
 def main():
 
-    print('Subreddits: %s', ', '.join(config[3:]))
+    print('Subreddits: %s', ', '.join(subs))
     while True:
         try:
-            comments = praw.helpers.comment_stream(reddit, '+'.join(config[2:]), limit=None, verbosity=0)
+            comments = praw.helpers.comment_stream(reddit, '+'.join(subs), limit=None, verbosity=0)
             for comment in comments:
-                if not already_processed(comment.id):
+                if not comment_read(comment.id):
                     Comment.create(sub_id=comment.id)
                     comment_string = base_string
-                    parent_string = base_string
+                    parent = False
+                    confirm = False
                     for line in comment.body.strip().split('\n'):
                         if '+stunfiskhelp' in line:
                             print('comment found! %s' %(comment.id))
                             parent = '-parent' in line
+                            confirm = '-confirm' in line
                             line = line.replace('-parent', '')
                             line = line.replace('-confirm', '')
-                            if (parent):
-                                parent_string = parent_string + process_comment(line.replace('+stunfiskhelp', '').lower(), comment) + '\n\n***\n\n'
-                            else:
-                                comment_string = comment_string + process_comment(line.replace('+stunfiskhelp', '').lower(), comment) + '\n\n***\n\n'
+                            comment_string = comment_string + process_comment(line.replace('+stunfiskhelp', '').lower(), comment) + '\n\n***\n\n'
 
                     if comment_string is not base_string:
-                        comment_string = comment_string + suffix
-                        reply(comment_string, comment, False, False)
-                    if parent_string is not base_string:
                         parent_string = parent_string + suffix
-                        reply(parent_string, comment, True, '-parent' in comment.body and '-confirm' in comment.body)
-
+                        reply(parent_string, comment, parent, parent and confirm)
 
         except KeyboardInterrupt:
             sys.exit(0)
@@ -143,7 +121,7 @@ def keys_to_string(keys):
             result = result + gen_string(key) + '\n\n'
         return result
     else:
-        return 'No Results Found\n\n' 
+        return 'No Results Found\n\n'
 def gen_string(key):
     string = '* Generation ' + key[0] + ' through ' + learn_types[key[1]]
     if key[1] == 'l':
@@ -362,7 +340,7 @@ def set_comment(pokemon, set_names):
     if is_format_correct(page):
         sets = sections[3:get_last_set(sections)]
         if set_names == []:
-            print('No Sets Quested -> Giving First One')
+            print('No Sets Requested -> Giving First One')
             return '##%s' %sets[0].replace('&gt;', '>')
         else:
             print('Sets Requested -> %s' %set_names)
@@ -444,12 +422,13 @@ def moveset_comment(moves, number):
 
     return comment_string
 
-def already_processed(sub_id):
+def comment_read(sub_id):
     try:
         Comment.get(Comment.sub_id==sub_id)
         return True
     except:
         return False
+
 
 file = open('Learnsets.json', 'r')
 learnsets = json.load(file)
