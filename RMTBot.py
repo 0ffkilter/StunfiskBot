@@ -15,6 +15,8 @@ db.connect()
 
 h = HTMLParser.HTMLParser()
 
+subs = reddit.get_subreddit('stunfisk+doublade')
+
 reg = re.compile('<[^>]+>')
 
 class Post(Model):
@@ -29,11 +31,14 @@ def main():
 
     while True:
         try:
-            posts = praw.helpers.submission_stream(reddit, '+'.join(subs), limit=None, verbosity=0)
-            for post in posts:
-                try:
+	    print('starting loop check')
+            post_gen = subs.get_new(limit=10)
+	    posts = [post for post in post_gen]
+	    for post in posts:
+		try:
                     if not submission_read(post.id):
-                        Post.create(sub_id=post.id)
+                        print('unread post -> %s' %post.title)
+			Post.create(sub_id=post.id)
                         if is_elligible(post):
                             if is_rmt(post.selftext_html, post.title):
                                 print "found rmt post -> %s, %s" %(post.title, str(post.subreddit))
@@ -41,8 +46,8 @@ def main():
                                     print "NoneType Post Found o.o"
                                 reply_text = build_post(post.selftext_html, post.title)
                                 post.add_comment(reply_text)
-                        else:
-                            print "Found inelligible post %s" %post.title
+		    else:
+			print('previously read post -> %s' %post.title)
                 except TypeError as e:
                     print "Type Error Generated -> %s,  %s" %(post.title, str(post.subreddit))
                     exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -50,7 +55,7 @@ def main():
                     print(exc_type, fname, exc_tb.tb_lineno)
                     print(traceback.format_exc())
 
-
+	    time.sleep(120)
         except KeyboardInterrupt:
             sys.exit(0)
         except Exception as e:

@@ -76,8 +76,6 @@ Too bad, that's not happening.
 
 Questions? Comments? Missing something?
 
-Send it to someone who cares.
-
 
 ^^^Send ^^^it ^^^to ^^^/u/0ffkilter
 """

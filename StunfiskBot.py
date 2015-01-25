@@ -20,12 +20,12 @@ class Comment(Model):
 Comment.create_table(True)
 
 def main():
-
-    print('Subreddits: %s', ', '.join(subs))
+    print('starting bot')
     while True:
         try:
-            comments = praw.helpers.comment_stream(reddit, '+'.join(subs), limit=None, verbosity=0)
+            comments = praw.helpers.comment_stream(reddit, 'stunfisk', limit=None, verbosity=0)
             for comment in comments:
+		print comment.id
                 if not comment_read(comment.id):
                     Comment.create(sub_id=comment.id)
                     comment_string = base_string
@@ -41,8 +41,8 @@ def main():
                             comment_string = comment_string + process_comment(line.replace('+stunfiskhelp', '').lower(), comment) + '\n\n***\n\n'
 
                     if comment_string is not base_string:
-                        parent_string = parent_string + suffix
-                        reply(parent_string, comment, parent, parent and confirm)
+                        comment_string = comment_string + suffix
+                        reply(comment_string, comment, parent, parent and confirm)
 
         except KeyboardInterrupt:
             sys.exit(0)
