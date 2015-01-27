@@ -8,7 +8,7 @@ gens = [range(1, 152), range(152, 252), range(252, 387), range(387, 494), range(
 base_string = '***\n\n'
 suffix = '\n\n^[help](http://www.reddit.com/r/Stunfisk/wiki/stunfiskbot) ^^created ^^by ^^/u/0ffkilter \n***'
 
-rmt_tags = ['rmt', 'hmf', 'hms', 'rmt', 'help me finish', 'help me start', 'my team', 'my first team']
+rmt_tags = ['rmt', 'hmf', 'hms', 'rate my team', 'help me finish', 'help me start', 'my team', 'my first team']
 tag_tiers = ['ou', 'uu', 'ru', 'nu', 'pu', 'fu', 'overused', 'underused', 'rarelyused', 'neverused', 'vgc', 'doubles', 'triples']
 min_length = 1000
 day = 86400
@@ -72,7 +72,7 @@ This is an automatic bot set up to help people format their RMTS (and other team
 
 Want to delete this post?
 
-Too bad, that's not happening.
+Bot will delete comments at -1 (or less)
 
 Questions? Comments? Missing something?
 
